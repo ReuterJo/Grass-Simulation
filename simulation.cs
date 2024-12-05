@@ -17,6 +17,10 @@ main( )
 {
 	uint gid = gl_GlobalInvocationID.x;	// the .y and .z are both 1 in this case
 
+	// translation of v2 = (r + g + w)*DT
+	// state validation for v2 and compute v1
+	// work on the state validation first, and then apply each force in turn
+
 	vec3 p = Positions[ gid ].xyz;
 
 	vec3 pp = p + C*DT;
