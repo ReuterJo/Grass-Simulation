@@ -1,6 +1,6 @@
-tessellation:	tessellation.cpp
-		g++   -o tessellation   tessellation.cpp  -I. -lGL -lGLU -lglut  -lm -lGLEW
+grass:		grass.cpp
+		g++   -o grass   grass.cpp  -I. -lGL -lGLU -lglut  -lm -lGLEW
 
 
 save:
-		cp tessellation.cpp tessellation.save.cpp
+		cp grass.cpp grass.save.cpp

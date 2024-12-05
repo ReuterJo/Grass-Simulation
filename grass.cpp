@@ -49,7 +49,7 @@
 
 // title of these windows:
 
-const char *WINDOWTITLE = "Particle System -- Jonathan Reuter";
+const char *WINDOWTITLE = "Grass Simulation -- Jonathan Reuter";
 const char *GLUITITLE   = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -90,27 +90,13 @@ const int LEFT   = 4;
 const int MIDDLE = 2;
 const int RIGHT  = 1;
 
-// Particle system constants
+// Grass simulation constants
 const float XMAX = 1.;
 const float XMIN = -1.;
 const float YMAX = 1.;
 const float YMIN = -1.;
 const float ZMAX = 1.;
 const float ZMIN = -1.;
-
-const float VXMAX = 1.;
-const float VXMIN = -1.;
-const float VYMAX = 1.;
-const float VYMIN = -1.;
-const float VZMAX = 1.;
-const float VZMIN = -1.;
-
-const float RMAX = 1.;
-const float RMIN = 0.;
-const float GMAX = 1.;
-const float GMIN = 0.;
-const float BMAX = 1.;
-const float BMIN = 0.;
 
 // which projection:
 
@@ -263,6 +249,10 @@ float	Dot(float [3], float [3]);
 float	Unit(float [3], float [3]);
 float	Unit(float [3]);
 
+// Grass simulation non-constant global variables
+GLuint	pos0SSbo;
+GLuint	pos1SSbo;
+GLuint	pos2SSbo;
 
 // utility to create an array from 3 separate values:
 
@@ -492,16 +482,16 @@ Display( )
 	glEnable( GL_NORMALIZE );
 
 	// Tessellation display code 
-	Pattern.Use( );
-	glPatchParameteri( GL_PATCH_VERTICES, 4 );
+	//Pattern.Use( );
+	//glPatchParameteri( GL_PATCH_VERTICES, 4 );
 
-	glBegin( GL_PATCHES );
-		glVertex3f( 0., 0., 0. );
-		glVertex3f( 1., 1., 1. );
-		glVertex3f( 2., 1., 0. );
-		glVertex3f( 3., 0., 1. );
-	glEnd( );
-	Pattern.UnUse( );
+	//glBegin( GL_PATCHES );
+	//	glVertex3f( 0., 0., 0. );
+	//	glVertex3f( 1., 1., 1. );
+	//	glVertex3f( 2., 1., 0. );
+	//	glVertex3f( 3., 0., 1. );
+	//glEnd( );
+	//Pattern.UnUse( );
 
 
 #ifdef DEMO_Z_FIGHTING
@@ -859,20 +849,25 @@ InitGraphics( )
 		fprintf( stderr, "GLEW initialized OK\n" );
 	fprintf( stderr, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
 //#endif
+
+	// Set up shader storage buffer for grass simulation
 	
+	glGenBuffers( 1, &pos1SSbo );
+	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos1SSbo );
+
 	// Setup GLSLProgram for tessellation shader
-	Pattern.Init( );
-	bool valid = Pattern.Create( "pattern.vert", "pattern.tcs", "pattern.tes", "pattern.frag" );
-	if ( !valid )
-	{
-		fprintf( stderr, "Yuch! The Tessellation shader did not compile.\n" );
-	}
-	else
-	{
-		fprintf( stderr, "Woo-Hoo! The Tesselation shader compiled.\n" ); 
-	}
-	Pattern.SetUniformVariable( "uOuter0", 20 );
-	Pattern.SetUniformVariable( "uOuter1", 10 );
+	//Pattern.Init( );
+	//bool valid = Pattern.Create( "pattern.vert", "pattern.tcs", "pattern.tes", "pattern.frag" );
+	//if ( !valid )
+	//{
+	//	fprintf( stderr, "Yuch! The Tessellation shader did not compile.\n" );
+	//}
+	//else
+	//{
+	//	fprintf( stderr, "Woo-Hoo! The Tesselation shader compiled.\n" ); 
+	//}
+	//Pattern.SetUniformVariable( "uOuter0", 20 );
+	//Pattern.SetUniformVariable( "uOuter1", 10 );
 }
 
 
