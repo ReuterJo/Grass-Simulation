@@ -486,16 +486,17 @@ Display( )
 	glEnable( GL_NORMALIZE );
 
 	// Tessellation display code 
-	//Pattern.Use( );
-	//glPatchParameteri( GL_PATCH_VERTICES, 4 );
-
-	//glBegin( GL_PATCHES );
-	//	glVertex3f( 0., 0., 0. );
-	//	glVertex3f( 1., 1., 1. );
-	//	glVertex3f( 2., 1., 0. );
-	//	glVertex3f( 3., 0., 1. );
-	//glEnd( );
-	//Pattern.UnUse( );
+	Pattern.Use( );
+	glPatchParameteri( GL_PATCH_VERTICES, 3 );
+	for( int i = 0; i < NUM_BLADES; i++ )
+	{
+		glBegin( GL_PATCHES );
+			glVertex3f( 0., 0., 0. );
+			glVertex3f( 1., 1., 1. );
+			glVertex3f( 2., 1., 0. );
+		glEnd( );
+	}
+	Pattern.UnUse( );
 
 
 #ifdef DEMO_Z_FIGHTING
@@ -901,18 +902,18 @@ InitGraphics( )
 	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
 
 	// Setup GLSLProgram for tessellation shader
-	//Pattern.Init( );
-	//bool valid = Pattern.Create( "pattern.vert", "pattern.tcs", "pattern.tes", "pattern.frag" );
-	//if ( !valid )
-	//{
-	//	fprintf( stderr, "Yuch! The Tessellation shader did not compile.\n" );
-	//}
-	//else
-	//{
-	//	fprintf( stderr, "Woo-Hoo! The Tesselation shader compiled.\n" ); 
-	//}
-	//Pattern.SetUniformVariable( "uOuter0", 20 );
-	//Pattern.SetUniformVariable( "uOuter1", 10 );
+	Pattern.Init( );
+	bool valid = Pattern.Create( "pattern.vert", "pattern.tcs", "pattern.tes", "pattern.frag" );
+	if ( !valid )
+	{
+		fprintf( stderr, "Yuch! The Tessellation shader did not compile.\n" );
+	}
+	else
+	{
+		fprintf( stderr, "Woo-Hoo! The Tesselation shader compiled.\n" ); 
+	}
+	Pattern.SetUniformVariable( "uOuter0", 20 );
+	Pattern.SetUniformVariable( "uOuter1", 10 );
 }
 
 
