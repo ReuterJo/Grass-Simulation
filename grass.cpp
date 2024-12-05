@@ -95,12 +95,12 @@ const int MIDDLE = 2;
 const int RIGHT  = 1;
 
 // Grass simulation constants
-const float XMAX = 1.;
-const float XMIN = -1.;
+const float XMAX = 10.;
+const float XMIN = -10.;
 const float YMAX = 1.;
-const float YMIN = -1.;
-const float ZMAX = 1.;
-const float ZMIN = -1.;
+const float YMIN = 0.;
+const float ZMAX = 10.;
+const float ZMIN = -10.;
 
 // which projection:
 
@@ -254,9 +254,7 @@ float	Unit(float [3], float [3]);
 float	Unit(float [3]);
 
 // Grass simulation non-constant global variables
-GLuint	pos0SSbo;
-GLuint	pos1SSbo;
-GLuint	pos2SSbo;
+GLuint	posSSbo;
 
 // utility to create an array from 3 separate values:
 
@@ -322,7 +320,7 @@ Ranf( float low, float high )
 //#include "keytime.cpp"
 #include "glslprogram.cpp"
 
-GLSLProgram Pattern; 	// global variables for shader programs
+GLSLProgram Render, Simulation; 	// global variables for shader programs
 
 // main program:
 
@@ -485,18 +483,24 @@ Display( )
 
 	glEnable( GL_NORMALIZE );
 
-	// Tessellation display code 
-	Pattern.Use( );
+	// Simulate grass using compute shader
+	glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 4, posSSbo );
+	Simulation.Use( );
+	Simulation.DispatchCompute( 3 * NUM_BLADES / WORK_GROUP_SIZE, 1, 1 );
+	Simulation.UnUse( );
+
+	// Render grass using tessellation shader 
+	Render.Use( );
 	glPatchParameteri( GL_PATCH_VERTICES, 3 );
-	for( int i = 0; i < NUM_BLADES; i++ )
-	{
-		glBegin( GL_PATCHES );
-			glVertex3f( 0., 0., 0. );
-			glVertex3f( 1., 1., 1. );
-			glVertex3f( 2., 1., 0. );
-		glEnd( );
-	}
-	Pattern.UnUse( );
+	glBindBuffer( GL_ARRAY_BUFFER, posSSbo );
+	glVertexPointer( 4, GL_FLOAT, 0, (void *)0 );
+	glEnableClientState( GL_VERTEX_ARRAY );
+
+	glDrawArrays( GL_PATCHES, 0, NUM_BLADES );
+
+	glDisableClientState( GL_VERTEX_ARRAY );
+	glBindBuffer( GL_ARRAY_BUFFER, 0 );
+	Render.UnUse( );
 
 
 #ifdef DEMO_Z_FIGHTING
@@ -857,53 +861,35 @@ InitGraphics( )
 
 	// Set up shader storage buffer for grass simulation
 	
-	glGenBuffers( 1, &pos0SSbo );
-	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos0SSbo );
-	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
+	glGenBuffers( 1, &posSSbo );
+	glBindBuffer( GL_SHADER_STORAGE_BUFFER, posSSbo );
+	glBufferData( GL_SHADER_STORAGE_BUFFER, 3 * NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
 
 	GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;	// the invalidate makes a big difference re-writing
 	
-	struct pos *points0 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
+	struct pos *points = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
 	for ( int i = 0; i < NUM_BLADES; i++ )
 	{
-		points0[i].x = Ranf( XMIN, XMAX );
-		points0[i].y = YMIN; 
-		points0[i].z = Ranf( ZMIN, ZMAX );
-		points0[i].w = 1.;
+		if ( i % 3 == 0 )
+		{
+			points[i].x = Ranf( XMIN, XMAX );
+			points[i].y = YMIN; 
+			points[i].z = Ranf( ZMIN, ZMAX );
+			points[i].w = 1.;
+		}
+		else
+		{
+			points[i].x = points[i-1].x;
+			points[i].y = YMAX; 
+			points[i].z = points[i-1].z;
+			points[i].w = 1.;
+		}
 	}
 	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
 
-	glGenBuffers( 1, &pos1SSbo );
-	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos1SSbo );
-	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
-
-	struct pos *points1 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
-	for ( int i = 0; i < NUM_BLADES; i++ )
-	{
-		points1[i].x = points0[i].x;
-		points1[i].y = YMAX; 
-		points1[i].z = points0[i].z;
-		points1[i].w = 1.;
-	}
-	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
-
-	glGenBuffers( 1, &pos2SSbo );
-	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos2SSbo );
-	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
-
-	struct pos *points2 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
-	for ( int i = 0; i < NUM_BLADES; i++ )
-	{
-		points2[i].x = points0[i].x;
-		points2[i].y = YMAX; 
-		points2[i].z = points0[i].z;
-		points2[i].w = 1.;
-	}
-	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
-
-	// Setup GLSLProgram for tessellation shader
-	Pattern.Init( );
-	bool valid = Pattern.Create( "pattern.vert", "pattern.tcs", "pattern.tes", "pattern.frag" );
+	// Setup GLSLProgram for rendering with tessellation shader
+	Render.Init( );
+	bool valid = Render.Create( "render.vert", "render.tcs", "render.tes", "render.frag" );
 	if ( !valid )
 	{
 		fprintf( stderr, "Yuch! The Tessellation shader did not compile.\n" );
@@ -912,8 +898,20 @@ InitGraphics( )
 	{
 		fprintf( stderr, "Woo-Hoo! The Tesselation shader compiled.\n" ); 
 	}
-	Pattern.SetUniformVariable( "uOuter0", 20 );
-	Pattern.SetUniformVariable( "uOuter1", 10 );
+	Render.SetUniformVariable( "uOuter0", 20 );
+	Render.SetUniformVariable( "uOuter1", 10 );
+
+	// Setup GLSLProgram for simulation compute shader
+	Simulation.Init( );
+       	valid = Simulation.Create( "simulation.cs" );
+	if ( !valid )
+	{
+		fprintf( stderr, "Yuch! The Compute shader did not compile.\n" );
+	}
+	else
+	{
+		fprintf( stderr, "Woo-Hoo! The Compute shader compiled.\n" ); 
+	}
 }
 
 
