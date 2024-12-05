@@ -29,6 +29,10 @@
 
 #include "glut.h"
 
+// Grass simulation directives
+#define NUM_BLADES		128*128
+#define WORK_GROUP_SIZE		128
+
 //	This is a sample OpenGL / GLUT program
 //
 //	The objective is to draw a 3d object and change the color of the axes
@@ -852,8 +856,49 @@ InitGraphics( )
 
 	// Set up shader storage buffer for grass simulation
 	
+	glGenBuffers( 1, &pos0SSbo );
+	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos0SSbo );
+	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
+
+	GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;	// the invalidate makes a big difference re-writing
+	
+	struct pos *points0 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
+	for ( int i = 0; i < NUM_BLADES; i++ )
+	{
+		points0[i].x = Ranf( XMIN, XMAX );
+		points0[i].y = YMIN; 
+		points0[i].z = Ranf( ZMIN, ZMAX );
+		points0[i].w = 1.;
+	}
+	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
+
 	glGenBuffers( 1, &pos1SSbo );
 	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos1SSbo );
+	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
+
+	struct pos *points1 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
+	for ( int i = 0; i < NUM_BLADES; i++ )
+	{
+		points1[i].x = points0[i].x;
+		points1[i].y = YMAX; 
+		points1[i].z = points0[i].z;
+		points1[i].w = 1.;
+	}
+	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
+
+	glGenBuffers( 1, &pos2SSbo );
+	glBindBuffer( GL_SHADER_STORAGE_BUFFER, pos2SSbo );
+	glBufferData( GL_SHADER_STORAGE_BUFFER, NUM_BLADES * sizeof(struct pos), NULL, GL_STATIC_DRAW );
+
+	struct pos *points2 = (struct pos *) glMapBufferRange( GL_SHADER_STORAGE_BUFFER, 0, NUM_BLADES * sizeof(struct pos), bufMask );
+	for ( int i = 0; i < NUM_BLADES; i++ )
+	{
+		points2[i].x = points0[i].x;
+		points2[i].y = YMAX; 
+		points2[i].z = points0[i].z;
+		points2[i].w = 1.;
+	}
+	glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
 
 	// Setup GLSLProgram for tessellation shader
 	//Pattern.Init( );
