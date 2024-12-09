@@ -102,6 +102,13 @@ const float YMIN = 0.;
 const float ZMAX = 10.;
 const float ZMIN = -10.;
 
+const float MASS = 0.002;  // kg
+
+// Glass simulation variables
+int WindActive = 1;
+int ControlPointsActive = 1;
+float Stiffness = 2.; // N/m^2
+
 // which projection:
 
 enum Projections
@@ -320,7 +327,7 @@ Ranf( float low, float high )
 //#include "keytime.cpp"
 #include "glslprogram.cpp"
 
-GLSLProgram Render, Simulation; 	// global variables for shader programs
+GLSLProgram Render, Simulation, Points; 	// global variables for shader programs
 
 // main program:
 
@@ -486,6 +493,9 @@ Display( )
 	// Simulate grass using compute shader
 	glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 4, posSSbo );
 	Simulation.Use( );
+	Simulation.SetUniformVariable( "time", Time );
+	Simulation.SetUniformVariable( "stiffness", Stiffness );
+	Simulation.SetUniformVariable( "windActive", WindActive );
 	Simulation.DispatchCompute( 3 * NUM_BLADES / WORK_GROUP_SIZE, 1, 1 );
 	Simulation.UnUse( );
 
@@ -501,6 +511,23 @@ Display( )
 	glDisableClientState( GL_VERTEX_ARRAY );
 	glBindBuffer( GL_ARRAY_BUFFER, 0 );
 	Render.UnUse( );
+
+	// Draw Bezier control curve points
+	if ( ControlPointsActive == 1)
+	{
+		Points.Use( );
+		glBindBuffer( GL_ARRAY_BUFFER, posSSbo );
+		glVertexPointer( 4, GL_FLOAT, 0, (void *)0 );
+		glEnableClientState( GL_VERTEX_ARRAY );
+
+		glPointSize( 2. );
+		glDrawArrays( GL_POINTS, 0, 3 * NUM_BLADES );
+
+		glPointSize( 1. );
+		glDisableClientState( GL_VERTEX_ARRAY );
+		glBindBuffer( GL_ARRAY_BUFFER, 0 );
+		Points.UnUse( );
+	}
 
 
 #ifdef DEMO_Z_FIGHTING
@@ -912,6 +939,21 @@ InitGraphics( )
 	{
 		fprintf( stderr, "Woo-Hoo! The Compute shader compiled.\n" ); 
 	}
+	Simulation.SetUniformVariable( "mass", MASS );
+	Simulation.SetUniformVariable( "ymin", YMIN );
+	Simulation.SetUniformVariable( "ymax", YMAX );
+
+	// Setup GLSLProgram for rendering Bezier control curve points
+	Points.Init( );
+	valid = Points.Create( "points.vert", "points.frag" );
+	if ( !valid )
+	{
+		fprintf( stderr, "Yuch! The control points shader did not compile.\n" );
+	}
+	else
+	{
+		fprintf( stderr, "Woo-Hoo! The control points shader compiled.\n" ); 
+	}
 }
 
 
@@ -949,6 +991,30 @@ Keyboard( unsigned char c, int x, int y )
 
 	switch( c )
 	{
+		case 'c': 
+		case 'C':
+			if ( ControlPointsActive == 1)
+				ControlPointsActive = 0;
+			else
+				ControlPointsActive = 1;
+			break;
+		case 's':
+		case 'S':
+			if ( Stiffness < 10. )
+				Stiffness += 1.;
+			break;
+		case 'x':
+		case 'X':
+			if ( Stiffness > 1. )
+				Stiffness -= 1.;
+			break;
+		case 'w':
+		case 'W':
+			if ( WindActive == 1)
+				WindActive = 0;
+			else
+				WindActive = 1;
+			break;
 		case 'o':
 		case 'O':
 			NowProjection = ORTHO;

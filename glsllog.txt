@@ -1,3 +1,4 @@
 
-0(2) : error C0104: Unknown pre-processor directive #ension
+0(50) : error C0000: syntax error, unexpected type identifier, expecting ',' or ';' at token "vec3"
+0(51) : error C1503: undefined variable "delta"
 
